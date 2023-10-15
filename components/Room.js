@@ -109,6 +109,47 @@ class Room {
         this.matrix[r][c].signals = [];
     }
 
+    initializeSoundsToPlay() {
+        return {
+            amsynth: {
+                notes: [],
+                lengths: [],
+            },
+            duosynth: {
+                notes: [],
+                lengths: [],
+            },
+            fmsynth: {
+                notes: [],
+                lengths: [],
+            },
+            membranesynth: {
+                notes: [],
+                lengths: [],
+            },
+            metalsynth: {
+                notes: [],
+                lengths: [],
+            },
+            monosynth: {
+                notes: [],
+                lengths: [],
+            },
+            noisesynth: {
+                notes: [],
+                lengths: [],
+            },
+            plucksynth: {
+                notes: [],
+                lengths: [],
+            },
+            synth: {
+                notes: [],
+                lengths: [],
+            },
+        };
+    }
+
     handleMatrixUpdate() {
         let todoSignals = [];
     
@@ -129,8 +170,7 @@ class Room {
         }
     
         // Propagating signals
-        let notesToPlay = [];
-        let lengthsToPlay = [];
+        let soundsToPlay = this.initializeSoundsToPlay();
         for (let i = 0; i < todoSignals.length; i++) {
             const [r, c, signal] = todoSignals[i];
             this.matrix[r][c].signals.push(signal);
@@ -139,8 +179,10 @@ class Room {
             if (this.matrix[r][c].type === 'note') {
                 if (signal.type === 'metronome') {
                     const val = this.matrix[r][c].val;
-                    notesToPlay.push(val.note.toUpperCase() + val.accidental + val.octave);
-                    lengthsToPlay.push(0.25); // TODO: need variable note lengths
+                    if (val.instrument in soundsToPlay) {
+                        soundsToPlay[val.instrument]['notes'].push(val.note.toUpperCase() + val.accidental + val.octave);
+                        soundsToPlay[val.instrument]['lengths'].push(0.25); // TODO: need variable note lengths
+                    }
                 } else if (signal.type === 'noteAdjuster') {
                     let noteWithAccidental = this.matrix[r][c].val.note.toUpperCase() + this.matrix[r][c].val.accidental;
                     let index = -1;
@@ -159,7 +201,7 @@ class Room {
             }
         }
 
-        return { notesToPlay, lengthsToPlay }; // TODO: add different instruments too
+        return soundsToPlay;
     };
 
     requestCellChange(row, column, value) {
