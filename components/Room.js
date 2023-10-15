@@ -76,8 +76,10 @@ class Room {
 
     setNextSignals(todoSignals, r, c) {
         for (let i = 0; i < this.matrix[r][c].signals.length; i++) {
-            const currSignal = this.matrix[r][c].signals[i];
-            switch (currSignal.direction) {
+            let currSignal = this.matrix[r][c].signals[i];
+            const direction = this.matrix[r][c].type === 'redirector' ? this.matrix[r][c].val.direction : currSignal.direction;
+            currSignal.direction = direction;
+            switch (direction) {
             case 'e':
                 if (c + 1 < constants.MATRIX_LENGTH) {
                     todoSignals.push([r, c + 1, currSignal]);
