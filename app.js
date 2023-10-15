@@ -29,7 +29,6 @@ roomManager.createRoom(
 
 io.on('connection', socket => {
     socket.on('joinRoom', ({ roomCode }) => {
-        roomCode = 1234; // TODO: tmp
         if (!roomManager.rooms.has(roomCode)) {
             socket.emit('errorMessage', { error: 'roomCode', message: 'Room does not exist!' });
             return;
@@ -41,15 +40,32 @@ io.on('connection', socket => {
         io.to(roomCode).emit('matrixChanged', room.matrix);
     });
 
-    socket.on('requestMatrixChange', ({ roomCode, row, column, value }) => {
-        roomCode = 1234; // TODO: tmp
+    socket.on('requestCellChange', ({ roomCode, row, column, value }) => {
         if (!roomManager.rooms.has(roomCode)) {
             socket.emit('errorMessage', { error: 'roomCode', message: 'Room does not exist!' });
             return;
         }
         const room = roomManager.rooms.get(roomCode);
-        room.requestCellChange(row, column, value);
-        io.to(roomCode).emit('matrixChanged', room.matrix);
+        const success = room.requestCellChange(row, column, value);
+        if (success) {
+            io.to(roomCode).emit('matrixChanged', room.matrix);
+        } else {
+            socket.emit('errorMessage', { error: 'requestCellChange', message: 'Failed to change matrix cell.'});
+        }
+    });
+
+    socket.on('requestDelayChange', ({ roomCode, newDelay }) => {
+        if (!roomManager.rooms.has(roomCode)) {
+            socket.emit('errorMessage', { error: 'roomCode', message: 'Room does not exist!' });
+            return;
+        }
+        const room = roomManager.rooms.get(roomCode);
+        const success = room.requestDelayChange(newDelay);
+        if (success) {
+            io.to(roomCode).emit('delayChanged', room.delay);
+        } else {
+            socket.emit('errorMessage', { error: 'requestDelayChange', message: 'Failed to change delay.'});
+        }
     });
 
     socket.on('disconnecting', () => {

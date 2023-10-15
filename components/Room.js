@@ -55,12 +55,6 @@ class Room {
         clearInterval(this.interval);
         this.interval = null;
     }
-    
-    changeUpdateDelay(newDelay) {
-        this.delay = newDelay;
-        this.endUpdate();
-        this.beginUpdate();
-    }
 
     handleMetronome(r, c) {
         if (this.ticks % this.matrix[r][c].val.ticksPerBeat === 0) {
@@ -207,6 +201,17 @@ class Room {
     requestCellChange(row, column, value) {
         // TODO: later, add checks (e.g. flats and sharps on certain notes only, restrict range of ticksperbeat, etc.) -- user can easily hack and update false matrices
         this.matrix[row][column] = value;
+        return true;
+    }
+
+    requestDelayChange(newDelay) {
+        if (newDelay < constants.MS_PER_TICK.MIN || newDelay > constants.MS_PER_TICK.MAX) {
+            return false;
+        }
+        this.endUpdate();
+        this.delay = newDelay;
+        this.beginUpdate();
+        return true;
     }
 }
 

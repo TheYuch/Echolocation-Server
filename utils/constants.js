@@ -1,9 +1,9 @@
 const MATRIX_LENGTH = 16;
 
 const MS_PER_TICK = {
-    MIN: 100,
+    MIN: 200,
     DEFAULT: 500,
-    MAX: 2000,
+    MAX: 1000,
 };
 
 const SCALES = {
