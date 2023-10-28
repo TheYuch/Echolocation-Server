@@ -23,13 +23,17 @@ class Room {
         this.emitPlaySounds = emitPlaySounds;
         this.ticks = 0;
         this.delay = constants.MS_PER_TICK.DEFAULT;
+        this.minDelay = constants.MS_PER_TICK.DEFAULT_MIN;
+        this.maxDelay = constants.MS_PER_TICK.DEFAULT_MAX;
         this.players = [];
         this.initializeMatrix();
         this.interval = null;
     }
 
     addPlayer(socketId) {
-        this.players.push(socketId);
+        if (!this.players.includes(socketId)) {
+            this.players.push(socketId);
+        }
         if (!this.interval) {
             this.beginUpdate();
         }
@@ -48,7 +52,7 @@ class Room {
             this.emitMatrixChanged(this.matrix);
             this.emitPlaySounds(soundsToPlay);
             this.ticks++;
-        }, this.delay); // TODO: add variable delay
+        }, this.delay);
     }
 
     endUpdate() {
@@ -200,14 +204,85 @@ class Room {
         return soundsToPlay;
     };
 
-    requestCellChange(row, column, value) {
-        // TODO: later, add checks (e.g. flats and sharps on certain notes only, restrict range of ticksperbeat, etc.) -- user can easily hack and update false matrices
-        this.matrix[row][column] = value;
-        return true;
+    requestCellChange(row, column, c) {
+        if (row < 0 || row >= constants.MATRIX_LENGTH ||
+            column < 0 || column >= constants.MATRIX_LENGTH) {
+            return false;
+        }
+
+        let newCell = this.matrix[row][column];
+
+        c = c.toLowerCase();
+        if (c === 'backspace') { // Backspace for deletion
+            newCell.type = '';
+            newCell.val = {};
+        } else if (c === 'arrowleft') { // Arrows for redirectors
+            newCell.type = 'redirector';
+            newCell.val = { direction: 'w' };
+        } else if (c === 'arrowright') {
+            newCell.type = 'redirector';
+            newCell.val = { direction: 'e' };
+        } else if (c === 'arrowup') {
+            newCell.type = 'redirector';
+            newCell.val = { direction: 'n' };
+        } else if (c === 'arrowdown') {
+            newCell.type = 'redirector';
+            newCell.val = { direction: 's' };
+        } else if (c.length === 1) {
+            if (!isNaN(c)) { // Single-char number
+                if (newCell.type === 'note') {
+                    newCell.val.octave = parseInt(c);
+                } else if (newCell.type === 'metronome' || newCell.type === 'noteAdjuster') {
+                    newCell.val.ticksPerBeat = parseInt(c);
+                }
+            } else if (c.match(/[a-z]/i)) { // Single-char alphabet
+                if (c.match(/[a-g]/i)) {
+                    newCell.type = 'note';
+                    newCell.val = {
+                        note: c,
+                        octave: constants.CELL.NOTE.DEFAULT_OCTAVE,
+                        accidental: '',
+                        instrument: constants.CELL.NOTE.DEFAULT_INSTRUMENT,
+                    };
+                } else if (c === 'm') {
+                    newCell.type = 'metronome';
+                    newCell.val = {
+                        ticksPerBeat: constants.CELL.METRONOME.DEFAULT_TICKS_PER_BEAT,
+                    };
+                } else if (c === 'n') {
+                    newCell.type = 'noteAdjuster';
+                    newCell.val = {
+                        ticksPerBeat: constants.CELL.NOTEADJUSTER.DEFAULT_TICKS_PER_BEAT,
+                    };
+                }
+            } else { // Accidentals, etc.
+                if (newCell.type === 'note') {
+                    if (c === '+' && constants.SCALES.NOTES_WITH_SHARPS.includes(newCell.val.note.toUpperCase())) {
+                        newCell.val.accidental = '#';
+                    } else if (c === '-' && constants.SCALES.NOTES_WITH_FLATS.includes(newCell.val.note.toUpperCase())) {
+                        newCell.val.accidental = 'b';
+                    } else { // Instruments setting: !@#$%^&*(
+                        if (c === '!') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[0];
+                        else if (c === '@') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[1];
+                        else if (c === '#') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[2];
+                        else if (c === '$') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[3];
+                        else if (c === '%') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[4];
+                        else if (c === '^') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[5];
+                        else if (c === '&') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[6];
+                        else if (c === '*') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[7];
+                        else if (c === '(') newCell.val.instrument = constants.CELL.NOTE.INSTRUMENTS[8];
+                    }
+                }
+            }
+        }
+
+        this.matrix[row][column] = newCell;
+
+        return true; // this doesn't track whether the cell actually changed to a new value
     }
 
     requestDelayChange(newDelay) {
-        if (newDelay < constants.MS_PER_TICK.MIN || newDelay > constants.MS_PER_TICK.MAX) {
+        if (newDelay < this.minDelay || newDelay > this.maxDelay) {
             return false;
         }
         this.endUpdate();

@@ -35,22 +35,22 @@ io.on('connection', socket => {
         }
         const room = roomManager.rooms.get(roomCode);
         socket.join(roomCode);
-        socket.emit('debugMessage', 'You have successfully joined a room with code ' + roomCode + '!');
         room.addPlayer(socket.id);
-        io.to(roomCode).emit('matrixChanged', room.matrix);
+        socket.emit('debugMessage', 'You have successfully joined a room with code ' + roomCode + '!');
+        socket.emit('delayChanged', { newDelay: room.delay, newMinDelay: room.minDelay, newMaxDelay: room.maxDelay });
     });
 
-    socket.on('requestCellChange', ({ roomCode, row, column, value }) => {
+    socket.on('requestCellChange', ({ roomCode, row, column, c }) => {
         if (!roomManager.rooms.has(roomCode)) {
             socket.emit('errorMessage', { error: 'roomCode', message: 'Room does not exist!' });
             return;
         }
         const room = roomManager.rooms.get(roomCode);
-        const success = room.requestCellChange(row, column, value);
+        const success = room.requestCellChange(row, column, c);
         if (success) {
-            io.to(roomCode).emit('matrixChanged', room.matrix);
+            io.to(roomCode).emit('matrixChanged', room.matrix); // TODO prevent too many calls from happening, consider deleting or timing out
         } else {
-            socket.emit('errorMessage', { error: 'requestCellChange', message: 'Failed to change matrix cell.'});
+            socket.emit('errorMessage', { error: 'requestCellChange', message: 'Failed to change cell.'});
         }
     });
 
@@ -62,7 +62,7 @@ io.on('connection', socket => {
         const room = roomManager.rooms.get(roomCode);
         const success = room.requestDelayChange(newDelay);
         if (success) {
-            io.to(roomCode).emit('delayChanged', room.delay);
+            io.to(roomCode).emit('delayChanged', { newDelay: room.delay, newMinDelay: room.minDelay, newMaxDelay: room.maxDelay }); // TODO prevent too many calls from happening, consider deleting or timing out
         } else {
             socket.emit('errorMessage', { error: 'requestDelayChange', message: 'Failed to change delay.'});
         }
