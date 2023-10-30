@@ -10,14 +10,14 @@ app.use(cors());
 const server = http.createServer(app);
 const io = require('socket.io')(server, {
     cors: {
-        origin: ['http://localhost:5173'],
+        origin: ['https://echolocation.vercel.app', 'http://localhost:5173'],
         methods: ['GET', 'POST'],
         credentials: true,
     },
     perMessagesDeflate: false,
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = parseInt(process.env.PORT) || 8000;
 
 // TODO: tmp - For testing purposes, rooms is pre-populated with one room.
 roomManager.createRoom(
